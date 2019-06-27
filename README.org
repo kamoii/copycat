@@ -1,1 +1,9 @@
 #+title: copycat
+
+X11 clipboard/selection utility written by haskell.
+If you want some feature, create an issue.
+
+
+* TODOS
+
+ * [ ] コマンドライン引数で対象 SELECTION を指定できるように
