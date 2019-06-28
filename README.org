@@ -23,7 +23,7 @@ Available commands:
 #+end_example
 
 
-* How to insatll
+* How to install
 
 Uses ~stack~.
 
