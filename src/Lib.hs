@@ -1,6 +1,9 @@
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE LambdaCase #-}
-module Lib where
+module Lib
+  ( echoCommand
+  , PredefinedSelection(..)
+  ) where
 
 import Prelude()
 import Relude
@@ -11,6 +14,17 @@ import Foreign.C.Types (CUChar(..))
 import qualified Data.ByteString as BS
 import UnliftIO.Exception
 
+data PredefinedSelection
+  = PrimarySelection
+  | SecondarySelection
+  | ClipboardSelection
+  deriving (Eq, Show)
+
+selectionName :: PredefinedSelection -> String
+selectionName PrimarySelection = "PRIMARY"
+selectionName SecondarySelection = "SECONDARY"
+selectionName ClipboardSelection = "CLIPBOARD"
+
 {-
 連続読み出しモード
 
@@ -18,9 +32,9 @@ import UnliftIO.Exception
 X11 clipboardとの連携時のemacs の yank の挙動。
 もし clipboad から none が返った場合、emacs自体の ring からの値が使われる。
 -}
-copycat :: IO Void
-copycat = withDisplay $ \display -> withSimpleWindow display $ \window -> do
-  sel <- internAtom display "CLIPBOARD" False
+echoCommand :: PredefinedSelection -> IO Void
+echoCommand psel = withDisplay $ \display -> withSimpleWindow display $ \window -> do
+  sel <- internAtom display (selectionName psel) False
   forever $ do
     beOwnerTill display window sel
     txtMaybe <- readSelectionText display window sel
