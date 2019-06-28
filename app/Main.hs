@@ -7,14 +7,8 @@ import Lib
 --
 import Options.Applicative.Simple
 
-data PredefinedSelection
-  = PrimarySelection
-  | SecondarySelection
-  | ClipboardSelection
-  deriving (Eq, Show)
-
 data GlobalOpts = GlobalOpts
-  { targetSelections :: [PredefinedSelection]
+  { targetSelection :: PredefinedSelection
   } deriving Show
 
 data Command
@@ -39,15 +33,32 @@ main = do
         (pure ())
 
   case cmd of
-    Echo -> absurd <$> copycat
+    Echo -> absurd <$> echoCommand
 
+{-| グローバルオプションのパーサ
+
+TODO: 複数指定した場合のエラーが分かりにくい。
+例えば --primary --secondary と指定した場合、エラーメッセージは
+
+  Invalid option `--secondary'
+
+となる。欲しいエラーメッセージは「primary/secondary/clipboard から一つ選んで」というもの。
+
+TODO: helpでの表示が微妙
+
+Usage: copycat [--version] [--help] ([--primary] | [--secondary] | [--clipboard]) COMMAND
+
+どっちかっていうと [--primary | --secondary | --clipboard] として欲しい。
+
+-}
 globalOptsParser :: Parser GlobalOpts
 globalOptsParser =
   let
-    targetSelections = fmap catMaybes $ sequenceA $ map optional
+    targetSelection :: Parser PredefinedSelection
+    targetSelection = asum
       [ flag' PrimarySelection   (long "primary")
       , flag' SecondarySelection (long "secondary")
       , flag' ClipboardSelection (long "clipboard")
       ]
   in
-    GlobalOpts <$> targetSelections
+    GlobalOpts <$> (targetSelection <|> pure ClipboardSelection)
