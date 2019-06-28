@@ -1,7 +1,7 @@
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE LambdaCase #-}
 module Lib
-  ( echoCommand
+  ( catCommand
   , PredefinedSelection(..)
   ) where
 
@@ -32,8 +32,8 @@ selectionName ClipboardSelection = "CLIPBOARD"
 X11 clipboardとの連携時のemacs の yank の挙動。
 もし clipboad から none が返った場合、emacs自体の ring からの値が使われる。
 -}
-echoCommand :: PredefinedSelection -> IO Void
-echoCommand psel = withDisplay $ \display -> withSimpleWindow display $ \window -> do
+catCommand :: PredefinedSelection -> IO Void
+catCommand psel = withDisplay $ \display -> withSimpleWindow display $ \window -> do
   sel <- internAtom display (selectionName psel) False
   forever $ do
     beOwnerTill display window sel

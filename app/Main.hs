@@ -12,7 +12,7 @@ data GlobalOpts = GlobalOpts
   } deriving Show
 
 data Command
-  = Echo
+  = Cat
   deriving (Eq, Show)
 
 {-
@@ -27,13 +27,13 @@ main = do
                   globalOptsParser $
     do
       addCommand
-        "echo"
+        "cat"
         "Echo the selection to stdout."
-        (const Echo)
+        (const Cat)
         (pure ())
 
   case cmd of
-    Echo -> absurd <$> echoCommand (targetSelection opts)
+    Cat -> absurd <$> catCommand (targetSelection opts)
 
 {-| グローバルオプションのパーサ
 

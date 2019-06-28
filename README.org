@@ -19,7 +19,7 @@ Available options:
   --clipboard              operate on the CLIPBOARD selection (default).
 
 Available commands:
-  echo                     Echo the selection to stdout.
+  cat                      Echo the selection to stdout.
 #+end_example
 
 
