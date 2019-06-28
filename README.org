@@ -3,7 +3,36 @@
 X11 clipboard/selection utility written by haskell.
 If you want some feature, create an issue.
 
+* Usage
+
+#+begin_example
+X11 clipboard/selection utility.
+
+Usage: copycat [--version] [--help] ([--primary] | [--secondary] |
+               [--clipboard]) COMMAND
+
+Available options:
+  --version                Show version
+  --help                   Show this help text
+  --primary                operate on the PRIMARY selection.
+  --secondary              operate on the SECONDARY selection.
+  --clipboard              operate on the CLIPBOARD selection (default).
+
+Available commands:
+  echo                     Echo the selection to stdout.
+#+end_example
+
+
+* How to insatll
+
+Uses ~stack~.
+
+#+begin_src shellscript
+git clone https://github.com/kamoii/copycat.git
+cd copycat
+stack insatll
+#+end_src
 
 * TODOS
 
- * [ ] コマンドライン引数で対象 SELECTION を指定できるように
+ * [X] コマンドライン引数で対象 SELECTION を指定できるように
