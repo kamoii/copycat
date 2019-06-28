@@ -30,7 +30,7 @@ Uses ~stack~.
 #+begin_src shellscript
 git clone https://github.com/kamoii/copycat.git
 cd copycat
-stack insatll
+stack install
 #+end_src
 
 * TODOS
