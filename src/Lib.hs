@@ -1,5 +1,8 @@
 {-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE MultiWayIf #-}
+{-# LANGUAGE OverloadedStrings #-}
 module Lib
   ( catCommand
   , PredefinedSelection(..)
@@ -11,6 +14,7 @@ import Control.Monad.Loops
 import Graphics.X11.Xlib
 import Graphics.X11.Xlib.Extras
 import Foreign.C.Types (CUChar(..))
+import Foreign.Marshal.Array (withArrayLen)
 import qualified Data.ByteString as BS
 import UnliftIO.Exception
 
@@ -35,12 +39,12 @@ X11 clipboardとの連携時のemacs の yank の挙動。
 catCommand :: PredefinedSelection -> IO Void
 catCommand psel = withDisplay $ \display -> withSimpleWindow display $ \window -> do
   sel <- internAtom display (selectionName psel) False
-  forever $ do
-    beOwnerTill display window sel
+  flip iterateM_ Nothing $ \content' -> do
+    beOwnerTill content' display window sel
     txtMaybe <- readSelectionText display window sel
     case txtMaybe of
-      Just txt -> putTextLn txt
-      Nothing -> pure ()
+      Just txt -> putTextLn txt *> pure (Just txt)
+      Nothing -> pure Nothing
 
 withDisplay =
   bracket (openDisplay "") closeDisplay
@@ -69,8 +73,8 @@ readSelectionText display window sel = do
 OWNER権を取得した後に奪わえるまで待つ。
 Request に対しては取りあえず何も反応しない。
 -}
-beOwnerTill :: Display -> Window -> Atom -> IO ()
-beOwnerTill display window sel = do
+beOwnerTill :: Maybe Text -> Display -> Window -> Atom -> IO ()
+beOwnerTill content' display window sel = do
   xSetSelectionOwner display sel window currentTime
   untilJust $ do
     ev <- getNextEvent display
@@ -78,35 +82,52 @@ beOwnerTill display window sel = do
       SelectionClear { ev_selection } ->
         pure $ Just ()
       SelectionRequest {} -> do
-        -- owner 中にリクエストが来た場合は無視
-        rejectSelectionRequest display ev
+        let handler = maybe sendNoContent serveContent content'
+        handler display ev
         pure Nothing
       _ ->
         pure Nothing
 
--- SelectionRequest {..} -> do
---     -- target' <- getAtomName display ev_target
---     -- res <- handleOutput display ev_requestor ev_property target' str
---     -- sendSelectionNotify display ev_requestor ev_selection ev_target res ev_time
---     -- go clipboards evPtr
+{-| リクエストに対応する。
 
-{-
-拒否する場合は roperty に None を指定した SelectionNotify イベントをリ
-クエスト元に送信する。
+ * 要求するターゲット(ev_target) がこちらが返せる形式か
+ * ev_property が None の可能性があり(/* Property is set to None by "obsolete" clients. */)
+
 -}
-rejectSelectionRequest
-  :: Display
+serveContent
+  :: Text
+  -> Display
   -> Event
   -> IO ()
-rejectSelectionRequest
-  display
-  SelectionRequest{ ev_requestor, ev_selection, ev_target, ev_time } =
+serveContent content display ev@SelectionRequest{ .. } = do
+  utf8 <- internAtom display "UTF8_STRING" False
+  if
+    | ev_property == none -> do
+        sendSelectionNotifyEvent display ev none
+    | ev_target == utf8 -> do
+        void $ withArrayLen (bsToCUChars $ encodeUtf8 content) $ \len strPtr ->
+          xChangeProperty
+            display
+            ev_requestor
+            ev_property
+            utf8 8 propModeReplace strPtr (fromIntegral len)
+        sendSelectionNotifyEvent display ev ev_property
+    | otherwise -> do
+        sendSelectionNotifyEvent display ev none
+
+sendNoContent :: Display -> Event -> IO ()
+sendNoContent display ev = sendSelectionNotifyEvent display ev none
+
+sendSelectionNotifyEvent
+  :: Display
+  -> Event
+  -> Atom
+  -> IO ()
+sendSelectionNotifyEvent display SelectionRequest{ .. } prop =
   allocaXEvent $ \ev -> do
     setEventType ev selectionNotify
-    setSelectionNotify ev ev_requestor ev_selection ev_target none ev_time
+    setSelectionNotify ev ev_requestor ev_selection ev_target prop ev_time
     sendEvent display ev_requestor False 0 ev
-rejectSelectionRequest _ _ =
-  throwString "??"
 
 -- TODO: これは何をしている？
 -- https://hackage.haskell.org/package/X11-1.9/docs/Graphics-X11-Xlib-Event.html
@@ -121,6 +142,9 @@ getWindowPropertyBS :: Display -> Atom -> Window -> IO (Maybe ByteString)
 getWindowPropertyBS d a w = do
   words <- rawGetWindowProperty 8 d a w
   pure $ BS.pack . map (\(CUChar w8) -> w8) <$> words
+
+bsToCUChars :: ByteString -> [CUChar]
+bsToCUChars = BS.unpack >>> map CUChar
 
 {-
 newtype CChar = CChar Int8
@@ -163,16 +187,6 @@ advertiseSelection display clipboards' str = allocaXEvent (go clipboards')
  #endif
           _ -> go clipboards evPtr
 
-handleOutput :: Display -> Window -> Atom -> Maybe String -> [CUChar] -> IO Atom
-handleOutput display req prop (Just "UTF8_STRING") str = do
-    prop' <- getAtomName display prop
-    if isNothing prop' then handleOutput display req prop Nothing str else do
-        target <- internAtom display "UTF8_STRING" True
-        void $ withArrayLen str $ \len str' ->
-            xChangeProperty display req prop target 8 propModeReplace str'
-                            (fromIntegral len)
-        return prop
-handleOutput _ _ _ _ _ = return none
 
 sendSelectionNotify :: Display -> Window -> Atom -> Atom -> Atom -> Time -> IO ()
 sendSelectionNotify display req sel target prop time = allocaXEvent $ \ev -> do

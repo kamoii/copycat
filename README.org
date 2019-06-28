@@ -36,3 +36,5 @@ stack insatll
 * TODOS
 
  * [X] コマンドライン引数で対象 SELECTION を指定できるように
+ * [X] cat中最後に読みとった selectionの内容を返すようにする
+ * [ ] テスト書く
