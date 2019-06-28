@@ -33,7 +33,7 @@ main = do
         (pure ())
 
   case cmd of
-    Echo -> absurd <$> echoCommand
+    Echo -> absurd <$> echoCommand (targetSelection opts)
 
 {-| グローバルオプションのパーサ
 
@@ -56,9 +56,9 @@ globalOptsParser =
   let
     targetSelection :: Parser PredefinedSelection
     targetSelection = asum
-      [ flag' PrimarySelection   (long "primary")
-      , flag' SecondarySelection (long "secondary")
-      , flag' ClipboardSelection (long "clipboard")
+      [ flag' PrimarySelection   $ long "primary" <> help "operate on the PRIMARY selection."
+      , flag' SecondarySelection $ long "secondary" <> help "operate on the SECONDARY selection."
+      , flag' ClipboardSelection $ long "clipboard" <> help "operate on the CLIPBOARD selection (default)."
       ]
   in
     GlobalOpts <$> (targetSelection <|> pure ClipboardSelection)
