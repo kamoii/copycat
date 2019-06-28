@@ -147,11 +147,6 @@ bsToCUChars :: ByteString -> [CUChar]
 bsToCUChars = BS.unpack >>> map CUChar
 
 {-
-newtype CChar = CChar Int8
--}
-
-
-{-
 setClipboardString :: String -> IO ()
 setClipboardString str = do
     (display, window, clipboards) <- initialSetup
@@ -164,36 +159,4 @@ setClipboardString str = do
         advertiseSelection display clipboards (stringToChars str)
         cleanup display window
 
-advertiseSelection :: Display -> [Atom] -> [CUChar] -> IO ()
-advertiseSelection display clipboards' str = allocaXEvent (go clipboards')
-  where
-    go [] _ = return ()
-    go clipboards evPtr = do
-      nextEvent display evPtr
-      ev <- getEvent evPtr
-      case ev of
-          SelectionRequest {..} -> do
-              target' <- getAtomName display ev_target
-              res <- handleOutput display ev_requestor ev_property target' str
-              sendSelectionNotify display ev_requestor ev_selection ev_target res ev_time
-              go clipboards evPtr
-
- #if MIN_VERSION_X11(1,8,0)
-          SelectionClear {..} -> go (filter (/= ev_selection) clipboards) evPtr
- #else
-          _ | ev_event_type ev == selectionClear -> do
-              target <- peekByteOff evPtr 40 :: IO Atom
-              go (filter (/= target) clipboards) evPtr
- #endif
-          _ -> go clipboards evPtr
-
-
-sendSelectionNotify :: Display -> Window -> Atom -> Atom -> Atom -> Time -> IO ()
-sendSelectionNotify display req sel target prop time = allocaXEvent $ \ev -> do
-    setEventType ev selectionNotify
-    setSelectionNotify ev req sel target prop time
-    sendEvent display req False 0 ev
-
-stringToChars :: String -> [CUChar]
-stringToChars = map fromIntegral . encode
 -}
