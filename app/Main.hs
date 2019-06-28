@@ -23,7 +23,7 @@ main = do
   (opts, cmd) <-
     simpleOptions "0.1.0"
                   "X11 clipboard/selection utility."
-                  "desc"
+                  ""
                   globalOptsParser $
     do
       addCommand
