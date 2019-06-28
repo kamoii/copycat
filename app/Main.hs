@@ -19,7 +19,7 @@ data GlobalOpts = GlobalOpts
 
 data Command
   = Echo
-  deriving Show
+  deriving (Eq, Show)
 
 {-
 標準 selection
@@ -38,9 +38,8 @@ main = do
         (const Echo)
         (pure ())
 
-  print opts
-  print cmd
-  -- absurd <$> copycat
+  case cmd of
+    Echo -> absurd <$> copycat
 
 globalOptsParser :: Parser GlobalOpts
 globalOptsParser =
